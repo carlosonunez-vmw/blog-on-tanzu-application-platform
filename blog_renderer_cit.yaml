@@ -1,0 +1,32 @@
+# The blog-renderer ClusterImageTemplate uses a Tekton Task to
+# render a blog given URLs for the blog's and blog-gen's source code.
+#
+# NOTE: You don't _have_ to use Tekton here! The beauty of
+# ClusterImageTemplates is that you can use whatever tool you need to get
+# the job done (the "job", in this case, being an image containing our
+# blog's assets).
+apiVersion: carto.run/v1alpha1
+kind: ClusterImageTemplate
+metadata:
+  name: blog-renderer
+spec:
+  healthRule:
+    singleConditionType: Ready
+  lifecycle: tekton
+  imagePath: .status.taskResults[?(@.name=="image_path")].value
+  ytt: |
+    #@ load("@ytt:data", "data")
+    ---
+    apiVersion: tekton.dev/v1beta1
+    kind: TaskRun
+    metadata:
+      generateName: #@ data.values.workload.metadata.name + "-blog-renderer-"
+    spec:
+      taskRef:
+        name: fetch-and-render-blog
+        kind: ClusterTask
+      params:
+        - name: blog_gen_url
+          value: #@ data.values.configs.blog-config.blog-gen-url
+        - name: blog_url
+          value: #@ data.values.configs.blog-config.blog-url
