@@ -15,17 +15,15 @@ spec:
     - name: default_blog_gen_url
       value: http://github.com/carlosonunez/https-hugo-bloggen
     - name: default_blog_gen_version
-      value: v2.2.0
+      value: v2.2.1
+    - name: default_blog_gen_registry
+      value: docker.io
+    - name: default_blog_gen_registry_secret
+      value: blog-repo-secret
   # selectors allow you to specify labels that Workloads can use to
   # select this supply chain with.
   selectors:
     is-blog: true
-  # I like to use selectorMatchExpressions since they give me more flexibility
-  # in what Workloads can provide.
-  selectorMatchExpressions:
-    - key: blog-type
-      operator: in
-      value: [ "hugo" ]
   # resources are the objects that Cartographer will create to release this blog.
   resources:
     # The first thing we're going to do is "initialize" the blog that we're

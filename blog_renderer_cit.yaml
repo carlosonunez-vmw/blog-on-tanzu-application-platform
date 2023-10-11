@@ -13,20 +13,34 @@ spec:
   healthRule:
     singleConditionType: Ready
   lifecycle: tekton
-  imagePath: .status.taskResults[?(@.name=="image_path")].value
+  imagePath: .status.pipelineResults[?(@.name=="image_path")].value
   ytt: |
     #@ load("@ytt:data", "data")
     ---
     apiVersion: tekton.dev/v1beta1
-    kind: TaskRun
+    kind: PipelineRun
     metadata:
-      generateName: #@ data.values.workload.metadata.name + "-blog-renderer-"
+      generateName: #@ data.values.workload.metadata.name + "-render-blog-run-"
     spec:
-      taskRef:
-        name: fetch-and-render-blog
-        kind: ClusterTask
       params:
         - name: blog_gen_url
-          value: #@ data.values.configs.blog-config.blog-gen-url
+          value: #@ data.values.configs.blog-config.blog_gen_url
+        - name: blog_gen_version
+          value: #@ data.values.configs.blog-config.blog_gen_version
         - name: blog_url
-          value: #@ data.values.configs.blog-config.blog-url
+          value: #@ data.values.configs.blog-config.blog_url
+        - name: registry_name
+          value: #@ data.values.configs.blog-config.blog_registry_name
+      workspaces:
+        - name: blog-storage
+          emptyDir: {}
+        - name: scratch-space
+          emptyDir: {}
+        - name: blog-env-secret
+          secret:
+            name: #@ data.values.configs.blog-config.blog_env_kubernetes_secret
+        - name: blog-registry-secret
+          secret:
+            name: #@ data.values.configs.blog-config.blog_registry_secret
+      pipelineRef:
+        name: render-the-blog

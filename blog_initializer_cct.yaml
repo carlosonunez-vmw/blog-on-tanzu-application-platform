@@ -32,14 +32,29 @@ spec:
     #@   _get_param_value_with_default("blog_gen_url", "default_blog_gen_url")
     #@ end
     
-    #@ def blog_url_exn():
+    #@ def blog_url_required():
     #@    _get_param_or_fail("blog_url", "Please define 'blog_url' in your workload.")
+    #@ end
+    
+    #@ def blog_secret_required():
+    #@    _get_param_or_fail("blog_env_secret", "Please define 'blog_env_secret' in your workload and put the passphrase for your blog inside of it.")
+    #@ end
+    
+    #@ def blog_registry_secret():
+    #@   _get_param_value_with_default("blog_registry_secret", "default_blog_registry_secret")
+    #@ end
+    
+    #@ def blog_registry_name():
+    #@  _get_param_value_with_default("blog_registry_name", "default_blog_registry_name")
     #@ end
     apiVersion: v1
     kind: ConfigMap
     metadata:
       name: #@ "{}-config".format(data.values.workload.metadata.name)
     data:
+      blog_url: #@ blog_url_required()
+      blog_env_kubernetes_secret: #@ blog_secret_required()
       blog_gen_version: #@ blog_gen_version()
       blog_gen_url: #@ blog_gen_url()
-      blog_url: #@ blog_url_exn()
+      blog_registry_secret: #@ blog_registry_secret()
+      blog_registry_name: #@ blog_registry_name()

@@ -1,0 +1,15 @@
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata: {}
+spec:
+  # All we need to do here is provide the parameters required by our Supply Chain.
+  #
+  # NOTE: We're using `params` to specify the Git repository of the blog
+  # that we want to deploy to demonstrate a minimal, simple example of a Supply Chain.
+  #
+  # A more advanced Supply Chain example can use a `ClusterSourceTemplate` combined
+  # with a `git` parameter and FluxCD to monitor a Git repository for changes
+  # and re-invoke an execution of the Supply Chain on new pushes.
+  params:
+    blog_url: https://github.com/carlosonunez/blog.carlosnunez.me
+    blog_env_secret: blog-carlosnunez-me-secret

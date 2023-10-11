@@ -1,0 +1,167 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  name: fetch-blog
+spec:
+  workspaces:
+    - name: scratch-space
+  params:
+    - name: blog_git_url
+    - name: blog_git_ref
+      value: main
+  steps:
+    - image: bitnami/git
+      args:
+        - clone
+        - --branch
+        - $(params["blog_git_ref"])
+        - $(params["blog_git_url"])
+        - $(workspaces.scratch-space.path)
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  name: fetch-blog-gen
+spec:
+  workspaces:
+    - name: scratch-space
+  params:
+    - name: blog_gen_git_url
+    - name: blog_gen_git_ref
+  steps:
+    - image: bitnami/git
+      args:
+        - clone
+        - --branch
+        - $(params["blog_git_ref"])
+        - $(params["blog_git_url"])
+        - $(workspaces.scratch-space.path)/blog-gen
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  name: decrypt-blog-env
+spec:
+  workspaces:
+    - name: scratch-space
+    - name: blog-env-secret
+  steps:
+    - image: alpine:3.16
+      script: |
+        set -eo pipefail
+        apk update
+        apk add gnupg
+        gpg --batch --decrypt --yes \
+          --passphrase=$(cat $(workspaces.blog-env-secret.path)/password) \
+          --output $(workspaces.scratch-space.path)/.env \
+          $(workspaces.scratch-space.path)/env.gpg
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  name: render-blog
+spec:
+  workspaces:
+    - name: scratch-space
+    - name: blog-storage
+  results:
+    - name: blog-server-name
+      type: string
+    - name: blog-version
+      type: string
+  steps:
+    - image: docker:24.0.6-dind
+      name: blog-gen-run
+      env:
+        - name: PLATFORM
+          value: local
+        - name: LOCAL_DESTINATION_PARENT_DIR
+          value: $(workspaces.blog-storage.path)
+      script: |
+        #!/usr/bin/env bash
+        $(workspaces.scratch-space.path)/blog-gen/deploy || exit 1
+        grep -E '^url:' $(workspaces.blog-storage.path)/.blog-metadata | \
+          awk -F '/' '{print $NF}' > $(results.blog-server-name.path)
+        grep -E '^version:' $(workspaces.blog-storage.path)/.blog-metadata | \
+          awk -F ' ' '{print $NF}' > $(results.blog-version.path)
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  name: create-and-push-blog-image
+spec:
+  workspaces:
+    - name: blog-storage
+    - name: blog-registry-secret
+      description: |
+        The Kubernetes secret containing credentials to the image registry
+        the blog will be stored into.
+  params:
+    - name: registry_name
+    - name: blog_server_name
+    - name: blog_version
+  results:
+    - name: blog_image_tag
+      type: string
+  steps:
+    - image: bash:5
+      script: |
+        printf "%s/%s:%s" \
+          $(params["registry_name"]) \
+          $(params["blog_server_name"]) \
+          $(params(["blog_version"]) > $(results.blog_image_tag.path)
+    - image: gcr.io/kaniko-project/executor:latest
+      env:
+        - name: DOCKER_CONFIG
+          value: "$(workspace.blog-registry-secret.path)"
+      args:
+        - --dockerfile=$(workspace.blog-storage.path)/Dockerfile
+        - --context=dir://$(workspace.blog-storage.path)
+        - --destination=$(results.blog_image_tag.path)
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: render-the-blog
+spec:
+  params:
+    - name: blog_gen_url
+    - name: blog_gen_version
+    - name: blog_url
+    - name: registry_name
+  workspaces:
+    - name: blog-storage
+    - name: scratch-space
+    - name: blog-env-secret
+    - name: blog-registry-secret
+  results:
+    - name: image_tag
+      description: The tag of the final image produced for the blog.
+      value: $(tasks.create-and-push-blog-image.results.blog_image_tag)
+  tasks:
+    - name: fetch-blog
+      params:
+        - name: blog_git_url
+          value: "$(params.blog_url)"
+      workspaces:
+        - name: scratch-space
+    - name: fetch-blog-gen
+      params:
+        - name: blog_gen_git_url
+          value: "$(params.blog_gen_url)"
+        - name: blog_gen_git_ref
+          value: "$(params.blog_gen_version)"
+      workspaces:
+        - name: scratch-space
+    - name: decrypt-blog-env
+      workspaces:
+        - name: scratch-space
+        - name: blog-env-secret
+    - name: render-blog
+      workspaces:
+        - name: scratch-space
+        - name: blog-storage
+    - name: create-and-push-blog-image
+      workspaces:
+        - name: blog-storage
