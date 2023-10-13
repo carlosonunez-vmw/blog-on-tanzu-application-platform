@@ -12,3 +12,4 @@ with a simple example for publishing a blog.
 - [Deploy the Tekton Pipeline and its Tasks](./guide/3-tekton.md)
 - [Deploy Cartographer Templates](./guide/4-carto-templates.md)
 - [Deploy the Supply Chain](./guide/5-carto-csc.md)
+- [Deploy the Workload and Publish the Blog](./guide/6-workload.md)
