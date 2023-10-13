@@ -6,4 +6,8 @@ blog.carlosnunez.me!
 
 ## Deploy the Workload
 
-First, we'll create a `Workload` for 
+First, we'll create a `Workload` that will publish blog.carlosnunez.me:
+
+```sh
+kubectl apply -f workload.yaml
+```
