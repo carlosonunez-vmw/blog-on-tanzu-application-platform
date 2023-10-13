@@ -15,6 +15,16 @@ We'll call this a "dev namespace" for the rest of this guide.
 kubectl create ns blog
 ```
 
+Afterwards, make the default Service Account in the namespace an admin
+in the cluster.
+
+```sh
+kubectl apply -f resources/namespace/role.yaml
+```
+
+> ⚠️  This is against best-practices and is not recommended. We're only
+> doing this here for testing.
+
 ## Provision a Docker Hub Registry Secret
 
 Afterwards, create a Docker Registry `Secret` called `blog-secret`

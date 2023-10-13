@@ -3,24 +3,6 @@ kind: ClusterSupplyChain
 metadata:
   name: publish-blog
 spec:
-  # `params` in a Supply Chain are a good place to put defaults
-  # that you'll supply to templates you'll use throughout the Chain.
-  #
-  # Since most params that you'll care about will come from Workloads,
-  # you'll mostly use the `${spec.workload.params}` template value
-  # within your templates instead.
-  #
-  # It would be cool if we could declare them here to enforce a schema
-  # of some kind, but, alas, that's not a thing yet.
-  params:
-    - name: default_blog_gen_url
-      value: http://github.com/carlosonunez/https-hugo-bloggen
-    - name: default_blog_gen_version
-      value: v2.2.1
-    - name: default_blog_gen_registry
-      value: docker.io
-    - name: default_blog_gen_registry_secret
-      value: blog-repo-secret
   # selectors allow you to specify labels that Workloads can use to
   # select this supply chain with.
   selector:
@@ -35,6 +17,24 @@ spec:
     # parameters throughout each Supply Chain resource, which is less
     # discoverable and more brittle.
     - name: config
+      # `params` in a Supply Chain are a good place to put defaults
+      # that you'll supply to templates you'll use throughout the Chain.
+      #
+      # Since most params that you'll care about will come from Workloads,
+      # you'll mostly use the `${spec.workload.params}` template value
+      # within your templates instead.
+      #
+      # It would be cool if we could declare them here to enforce a schema
+      # of some kind, but, alas, that's not a thing yet.
+      params:
+        - name: default_blog_gen_url
+          value: http://github.com/carlosonunez/https-hugo-bloggen
+        - name: default_blog_gen_version
+          value: v2.2.1
+        - name: default_blog_gen_registry
+          value: docker.io
+        - name: default_blog_registry_secret
+          value: blog-repo-secret
       templateRef:
         kind: ClusterConfigTemplate
         name: blog-config
@@ -52,7 +52,7 @@ spec:
       # and make it available online.
     - name: image
       configs:
-        - name: blog-config
+        - name: config
           resource: config
       templateRef:
         name: blog-renderer

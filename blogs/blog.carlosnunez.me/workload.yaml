@@ -1,6 +1,9 @@
 apiVersion: carto.run/v1alpha1
 kind: Workload
-metadata: {}
+metadata:
+  name: blog.carlosnunez.me
+  labels:
+    is-blog: "true"
 spec:
   # All we need to do here is provide the parameters required by our Supply Chain.
   #
@@ -11,5 +14,9 @@ spec:
   # with a `git` parameter and FluxCD to monitor a Git repository for changes
   # and re-invoke an execution of the Supply Chain on new pushes.
   params:
-    blog_url: https://github.com/carlosonunez/blog.carlosnunez.me
-    blog_env_secret: blog-secret
+    - name: blog_url
+      value: https://github.com/carlosonunez/blog.carlosnunez.me
+    - name: blog_env_secret
+      value: blog-secret
+    - name: blog_registry_name
+      value: docker.io/carlosnunez

@@ -17,20 +17,23 @@ spec:
   ytt: |
     #@ load("@ytt:data", "data")
     ---
+    #@ data.values
     apiVersion: tekton.dev/v1beta1
     kind: PipelineRun
     metadata:
       generateName: #@ data.values.workload.metadata.name + "-render-blog-run-"
     spec:
+      pipelineRef:
+        name: render-the-blog
       params:
         - name: blog_gen_url
-          value: #@ data.values.configs.blog-config.blog_gen_url
+          value: #@ data.values.config.blog_gen_url
         - name: blog_gen_version
-          value: #@ data.values.configs.blog-config.blog_gen_version
+          value: #@ data.values.config.blog_gen_version
         - name: blog_url
-          value: #@ data.values.configs.blog-config.blog_url
+          value: #@ data.values.config.blog_url
         - name: registry_name
-          value: #@ data.values.configs.blog-config.blog_registry_name
+          value: #@ data.values.config.blog_registry_name
       workspaces:
         - name: blog-storage
           emptyDir: {}
@@ -38,9 +41,7 @@ spec:
           emptyDir: {}
         - name: blog-env-secret
           secret:
-            name: #@ data.values.configs.blog-config.blog_env_kubernetes_secret
+            secretName: #@ data.values.config.blog_env_kubernetes_secret
         - name: blog-registry-secret
           secret:
-            name: #@ data.values.configs.blog-config.blog_registry_secret
-      pipelineRef:
-        name: render-the-blog
+            secretName: #@ data.values.config.blog_registry_secret

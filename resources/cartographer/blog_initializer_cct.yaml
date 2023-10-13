@@ -12,41 +12,62 @@ spec:
     alwaysHealthy: {}
   ytt: |
     #@ load("@ytt:data", "data")
+    #@ load("@ytt:assert", "assert")
+    #@ load("@ytt:struct", "struct")
+
+    #@ def _lookup_workload_param(param):
+    #@   for p in data.values.workload.spec.params:
+    #@     if p.name == param and p.value != "":
+    #@       return p.value
+    #@     end
+    #@   end
+    #@   return ""
+    #@ end
 
     #@ def _get_param_value_with_default(param, default_param):
-    #    if hasattr(data.values.params, param):
-    #      return data.values.params[param]
-    #    end
-    #    return data.values.params[default_param]
+    #@   val = _lookup_workload_param(param)
+    #@   if val != "":
+    #@     return val
+    #@   end
+    #@   default_val = data.values.params[default_param]
+    #@   if default_val != "":
+    #@     return default_val
+    #@   end
+    #@   assert.fail("default parameter is not defined in supply chain: " + default_param)
     #@ end
     
     #@ def _get_param_or_fail(param, fail_msg):
-    #    return data.values.params[param] or assert.fail(fail_msg)
+    #@   val = _lookup_workload_param(param)
+    #@   if val != "":
+    #@     return val
+    #@   end
+    #@   assert.fail(fail_msg)
     #@ end
     
     #@ def blog_gen_version():
-    #@   _get_param_value_with_default("blog_gen_version", "default_blog_gen_version")
+    #@   return _get_param_value_with_default("blog_gen_version", "default_blog_gen_version")
     #@ end
 
     #@ def blog_gen_url():
-    #@   _get_param_value_with_default("blog_gen_url", "default_blog_gen_url")
+    #@   return _get_param_value_with_default("blog_gen_url", "default_blog_gen_url")
     #@ end
     
     #@ def blog_url_required():
-    #@    _get_param_or_fail("blog_url", "Please define 'blog_url' in your workload.")
+    #@   return _get_param_or_fail("blog_url", "Please define 'blog_url' in your workload.")
     #@ end
     
     #@ def blog_secret_required():
-    #@    _get_param_or_fail("blog_env_secret", "Please define 'blog_env_secret' in your workload and put the passphrase for your blog inside of it.")
+    #@  return _get_param_or_fail("blog_env_secret", "Please define 'blog_env_secret' in your workload and put the passphrase for your blog inside of it.")
     #@ end
     
     #@ def blog_registry_secret():
-    #@   _get_param_value_with_default("blog_registry_secret", "default_blog_registry_secret")
+    #@   return _get_param_value_with_default("blog_registry_secret", "default_blog_registry_secret")
     #@ end
     
-    #@ def blog_registry_name():
-    #@  _get_param_value_with_default("blog_registry_name", "default_blog_registry_name")
+    #@ def blog_registry_name_required():
+    #@  return _get_param_or_fail("blog_registry_name", "Please define the container image registry to use in REGISTRY_HOST/PROJECT_NAME format, like 'docker.io/MY_DOCKER_HUB_USERNAME'")
     #@ end
+    ---
     apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -54,7 +75,7 @@ spec:
     data:
       blog_url: #@ blog_url_required()
       blog_env_kubernetes_secret: #@ blog_secret_required()
+      blog_registry_name: #@ blog_registry_name_required()
       blog_gen_version: #@ blog_gen_version()
       blog_gen_url: #@ blog_gen_url()
       blog_registry_secret: #@ blog_registry_secret()
-      blog_registry_name: #@ blog_registry_name()
