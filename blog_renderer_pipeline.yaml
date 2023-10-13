@@ -4,12 +4,14 @@ kind: ClusterTask
 metadata:
   name: fetch-blog
 spec:
+  description: Fetch the Blog
   workspaces:
     - name: scratch-space
   params:
     - name: blog_git_url
+      type: string
     - name: blog_git_ref
-      value: main
+      type: string
   steps:
     - image: bitnami/git
       args:
@@ -24,6 +26,7 @@ kind: ClusterTask
 metadata:
   name: fetch-blog-gen
 spec:
+  description: Fetch Blog Gen
   workspaces:
     - name: scratch-space
   params:
@@ -34,8 +37,8 @@ spec:
       args:
         - clone
         - --branch
-        - $(params["blog_git_ref"])
-        - $(params["blog_git_url"])
+        - $(params["blog_gen_git_ref"])
+        - $(params["blog_gen_git_url"])
         - $(workspaces.scratch-space.path)/blog-gen
 ---
 apiVersion: tekton.dev/v1beta1
@@ -43,6 +46,7 @@ kind: ClusterTask
 metadata:
   name: decrypt-blog-env
 spec:
+  description: Decrypt Blog Environment Dotenv
   workspaces:
     - name: scratch-space
     - name: blog-env-secret
@@ -62,6 +66,7 @@ kind: ClusterTask
 metadata:
   name: render-blog
 spec:
+  description: Render Blog
   workspaces:
     - name: scratch-space
     - name: blog-storage
@@ -91,6 +96,7 @@ kind: ClusterTask
 metadata:
   name: create-and-push-blog-image
 spec:
+  description: Create and Push Blog Image
   workspaces:
     - name: blog-storage
     - name: blog-registry-secret
@@ -125,6 +131,7 @@ kind: Pipeline
 metadata:
   name: render-the-blog
 spec:
+  description: Render the Blog
   params:
     - name: blog_gen_url
     - name: blog_gen_version
@@ -141,12 +148,16 @@ spec:
       value: $(tasks.create-and-push-blog-image.results.blog_image_tag)
   tasks:
     - name: fetch-blog
+      taskRef:
+        name: fetch-blog
       params:
         - name: blog_git_url
           value: "$(params.blog_url)"
       workspaces:
         - name: scratch-space
     - name: fetch-blog-gen
+      taskRef:
+        name: fetch-blog-gen
       params:
         - name: blog_gen_git_url
           value: "$(params.blog_gen_url)"
@@ -155,13 +166,19 @@ spec:
       workspaces:
         - name: scratch-space
     - name: decrypt-blog-env
+      taskRef:
+        name: decrypt-blog-env
       workspaces:
         - name: scratch-space
         - name: blog-env-secret
     - name: render-blog
+      taskRef:
+        name: render-blog
       workspaces:
         - name: scratch-space
         - name: blog-storage
     - name: create-and-push-blog-image
+      taskRef:
+        name: create-and-push-blog-image
       workspaces:
         - name: blog-storage

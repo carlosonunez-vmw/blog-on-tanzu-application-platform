@@ -1,6 +1,7 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSupplyChain
-metadata: {}
+metadata:
+  name: publish-blog
 spec:
   # `params` in a Supply Chain are a good place to put defaults
   # that you'll supply to templates you'll use throughout the Chain.
@@ -22,8 +23,8 @@ spec:
       value: blog-repo-secret
   # selectors allow you to specify labels that Workloads can use to
   # select this supply chain with.
-  selectors:
-    is-blog: true
+  selector:
+    is-blog: "true"
   # resources are the objects that Cartographer will create to release this blog.
   resources:
     # The first thing we're going to do is "initialize" the blog that we're
@@ -33,25 +34,28 @@ spec:
     # The alternative is to sprinkle references to Workload and Supply Chain
     # parameters throughout each Supply Chain resource, which is less
     # discoverable and more brittle.
-    - name: Initialize Blog
-      configs:
+    - name: config
+      templateRef:
+        kind: ClusterConfigTemplate
         name: blog-config
-        resource: blog-initializer
-    # Once our configuration has been generated, we're going to "render"
-    # the blog with a ClusterImageTemplate.
-    #
-    # This will fetch the blog's source code from the URL specified in the
-    # Workload as well as blog-gen, use blog-gen to render the blog's pages
-    # and static assets and compress everything into an OCI image
-    # (i.e. a glorified tarball).
-    #
-    # The ClusterImageTemplate will churn out the image's URL and
-    # revision (i.e. the blog's most recent commit SHA) so that
-    # we can create actual Kubernetes resources later in the supply chain
-    # and make it available online.
-    - name: Render Blog
-      images:
-        name: blog-image
-        resource: blog-renderer
-    - name: Test the Blog
-    - name: Release the Blog
+      # Once our configuration has been generated, we're going to "render"
+      # the blog with a ClusterImageTemplate.
+      #
+      # This will fetch the blog's source code from the URL specified in the
+      # Workload as well as blog-gen, use blog-gen to render the blog's pages
+      # and static assets and compress everything into an OCI image
+      # (i.e. a glorified tarball).
+      #
+      # The ClusterImageTemplate will churn out the image's URL and
+      # revision (i.e. the blog's most recent commit SHA) so that
+      # we can create actual Kubernetes resources later in the supply chain
+      # and make it available online.
+    - name: image
+      configs:
+        - name: blog-config
+          resource: config
+      templateRef:
+        name: blog-renderer
+        kind: ClusterImageTemplate
+#    - name: Test the Blog
+#    - name: Release the Blog

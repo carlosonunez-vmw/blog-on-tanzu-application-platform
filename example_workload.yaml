@@ -12,4 +12,4 @@ spec:
   # and re-invoke an execution of the Supply Chain on new pushes.
   params:
     blog_url: https://github.com/carlosonunez/blog.carlosnunez.me
-    blog_env_secret: blog-carlosnunez-me-secret
+    blog_env_secret: blog-secret
