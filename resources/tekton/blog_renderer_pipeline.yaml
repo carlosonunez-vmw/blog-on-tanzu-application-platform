@@ -141,9 +141,9 @@ spec:
     - name: blog_gen_url
     - name: blog_gen_version
     - name: blog_url
+    - name: blog_ref
     - name: registry_name
   workspaces:
-    - name: blog-storage
     - name: scratch-space
     - name: blog-env-secret
     - name: blog-registry-secret
@@ -154,14 +154,18 @@ spec:
   tasks:
     - name: fetch-blog
       taskRef:
-        name: fetch-blog
         kind: ClusterTask
+        name: fetch-blog
       params:
         - name: blog_git_url
           value: "$(params.blog_url)"
+        - name: blog_git_ref
+          value: "$(params.blog_ref)"
       workspaces:
         - name: scratch-space
     - name: fetch-blog-gen
+      runAfter:
+        - fetch-blog
       taskRef:
         kind: ClusterTask
         name: fetch-blog-gen

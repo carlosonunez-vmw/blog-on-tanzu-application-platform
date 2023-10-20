@@ -48,6 +48,10 @@ spec:
     #@   return _get_param_value_with_default("blog_gen_version", "default_blog_gen_version")
     #@ end
 
+    #@ def blog_ref():
+    #@   return _get_param_value_with_default("blog_ref", "default_blog_ref")
+    #@ end
+
     #@ def blog_gen_url():
     #@   return _get_param_value_with_default("blog_gen_url", "default_blog_gen_url")
     #@ end
@@ -74,6 +78,7 @@ spec:
       name: #@ "{}-config".format(data.values.workload.metadata.name)
     data:
       blog_url: #@ blog_url_required()
+      blog_ref: #@ blog_ref()
       blog_env_kubernetes_secret: #@ blog_secret_required()
       blog_registry_name: #@ blog_registry_name_required()
       blog_gen_version: #@ blog_gen_version()
