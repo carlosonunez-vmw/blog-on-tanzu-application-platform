@@ -34,7 +34,9 @@ spec:
         - name: default_blog_gen_registry
           value: docker.io
         - name: default_blog_registry_secret
-          value: blog-repo-secret
+          value: blog-registry-secret
+        - name: default_blog_ref
+          value: main
       templateRef:
         kind: ClusterConfigTemplate
         name: blog-config

@@ -113,18 +113,23 @@ spec:
   steps:
     - image: bash:5
       script: |
-        printf "%s/%s:%s" \
-          $(params["registry_name"]) \
+        set -x
+        printf "%s/%s:%s" $(params["registry_name"]) \
           $(params["blog_server_name"]) \
-          $(params(["blog_version"]) > $(results.blog_image_tag.path)
-    - image: gcr.io/kaniko-project/executor:latest
+          $(params["blog_version"]) > $(results.blog_image_tag.path)
+    - image: gcr.io/kaniko-project/executor:v1.9.1
       env:
         - name: DOCKER_CONFIG
-          value: "$(workspace.blog-registry-secret.path)"
+          value: $(workspace.blog-registry-secret.path)
       args:
-        - --dockerfile=$(workspace.blog-storage.path)/Dockerfile
-        - --context=dir://$(workspace.blog-storage.path)
-        - --destination=$(results.blog_image_tag.path)
+        - -v
+        - trace
+        - --dockerfile
+        - $(workspaces.scratch-space.path)/out/blog/Dockerfile
+        - --context
+        - dir://$(workspaces.scratch-space.path)/out/blog
+        - --destination
+        - $(results.blog_image_tag.path)
 ---
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline

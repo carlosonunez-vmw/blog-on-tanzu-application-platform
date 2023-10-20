@@ -27,12 +27,25 @@ kubectl apply -f resources/namespace/role.yaml
 
 ## Provision a Docker Hub Registry Secret
 
-Afterwards, create a Docker Registry `Secret` called `blog-secret`
+Afterwards, create a Docker Registry `Secret` called `blog-registry-secret`
 within this namespace to store your Docker Hub credentials inside of.
 
 ```sh
-kubectl create secret docker-registry blog-secret \
+kubectl create secret docker-registry blog-registry-secret \
     --docker-username=$DOCKER_HUB_USERNAME \
     --docker-password=$DOCKER_HUB_PASSWORD
 ```
 
+## Provide the blog's environment passphrase
+
+Blogs managed by `blog-gen` use GPG to encrypt credentials and other sensitive
+information. This file is called `env.gpg` and lives at the root of the
+repo.
+
+Here, we're going to create a Kubernetes secret to store the PGP passphrase
+that will be used to decrypt this file.
+
+```sh
+kubectl create secret generic blog-secret \
+    --from-literal=password=$YOUR_SUPER_SECRET_PASSPHRASE
+```
