@@ -32,13 +32,19 @@ spec:
           value: #@ data.values.config.blog_gen_version
         - name: blog_url
           value: #@ data.values.config.blog_url
+        - name: blog_ref
+          value: #@ data.values.config.blog_ref
         - name: registry_name
           value: #@ data.values.config.blog_registry_name
       workspaces:
-        - name: blog-storage
-          emptyDir: {}
         - name: scratch-space
-          emptyDir: {}
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 128Mi
         - name: blog-env-secret
           secret:
             secretName: #@ data.values.config.blog_env_kubernetes_secret

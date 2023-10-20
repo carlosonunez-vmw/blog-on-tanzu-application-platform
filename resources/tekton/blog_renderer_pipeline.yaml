@@ -3,6 +3,7 @@ apiVersion: tekton.dev/v1beta1
 kind: ClusterTask
 metadata:
   name: fetch-blog
+  namespace: default
 spec:
   description: Fetch the Blog
   workspaces:
@@ -13,8 +14,13 @@ spec:
     - name: blog_git_ref
       type: string
   steps:
+    - image: alpine:3.16
+      script: |
+        >&2 echo "===> Ensuring scratch space is empty..."
+        rm -rf $(workspaces.scratch-space.path)/*
     - image: bitnami/git
       args:
+        - git
         - clone
         - --branch
         - $(params["blog_git_ref"])
@@ -25,6 +31,7 @@ apiVersion: tekton.dev/v1beta1
 kind: ClusterTask
 metadata:
   name: fetch-blog-gen
+  namespace: default
 spec:
   description: Fetch Blog Gen
   workspaces:
@@ -35,6 +42,7 @@ spec:
   steps:
     - image: bitnami/git
       args:
+        - git
         - clone
         - --branch
         - $(params["blog_gen_git_ref"])
@@ -45,6 +53,7 @@ apiVersion: tekton.dev/v1beta1
 kind: ClusterTask
 metadata:
   name: decrypt-blog-env
+  namespace: default
 spec:
   description: Decrypt Blog Environment Dotenv
   workspaces:
