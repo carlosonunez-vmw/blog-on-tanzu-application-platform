@@ -74,40 +74,83 @@ apiVersion: tekton.dev/v1beta1
 kind: ClusterTask
 metadata:
   name: render-blog
+  namespace: default
 spec:
   description: Render Blog
   workspaces:
     - name: scratch-space
-    - name: blog-storage
   results:
     - name: blog-server-name
       type: string
     - name: blog-version
       type: string
-  steps:
+  volumes:
+    - name: dind-storage
+      emptyDir: {}
+    - name: dind-socket
+      emptyDir: {}
+    - name: blog-staging-dir
+      emptyDir: {}
+  sidecars:
     - image: docker:24.0.6-dind
+      name: dockerd
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - mountPath: /var/lib/docker
+          name: dind-storage
+        - mountPath: /var/run
+          name: dind-socket
+        # /tmp needs to be mounted here and shared
+        # with the task Pod since volume mounts
+        # in DinD passthrough into the host
+        # from the nested container.
+        - mountPath: /tmp
+          name: blog-staging-dir
+  steps:
+    - image: docker:24.0.6-cli-alpine3.18
       name: blog-gen-run
+      volumeMounts:
+        - mountPath: /var/run
+          name: dind-socket
+        - mountPath: /tmp
+          name: blog-staging-dir
       env:
         - name: PLATFORM
           value: local
         - name: LOCAL_DESTINATION_PARENT_DIR
-          value: $(workspaces.blog-storage.path)
+          value: $(workspaces.scratch-space.path)/out
       script: |
-        #!/usr/bin/env bash
-        $(workspaces.scratch-space.path)/blog-gen/deploy || exit 1
-        grep -E '^url:' $(workspaces.blog-storage.path)/.blog-metadata | \
-          awk -F '/' '{print $NF}' > $(results.blog-server-name.path)
-        grep -E '^version:' $(workspaces.blog-storage.path)/.blog-metadata | \
-          awk -F ' ' '{print $NF}' > $(results.blog-version.path)
+        apk update && apk add bash rsync git netcat-openbsd curl
+        >&2 echo "===> Waiting 10 seconds for Docker daemon to start"
+        attempts=0
+        while [[ "$attempts" -le 10 ]]
+        do
+          status=$(curl --unix-socket /var/run/docker.sock http:/v1/info -w '%{http_code}' -o /dev/null -sS) || true
+        >&2 echo "Status: $status"
+          [[ "$status" == "200" ]] && break
+          >&2 echo "---> Trying again [attempt $attempts of 10]; last code: $status"
+          attempts=$((attempts+1))
+          sleep 1
+        done
+        [[ "$attempts" -eq 10 ]] && exit 1
+        cd $(workspaces.scratch-space.path)
+        >&2 echo "===> Deploying blog"
+        $(workspaces.scratch-space.path)/blog-gen/scripts/deploy || exit 1
+        grep -E '^url:' $LOCAL_DESTINATION_PARENT_DIR/blog/.blog-metadata | tr -d '"' | \
+          awk -F '/' '{print $NF}' | tr -d '\n'  > $(results.blog-server-name.path)
+        grep -E '^version:' $LOCAL_DESTINATION_PARENT_DIR/blog/.blog-metadata | \
+          awk -F ' ' '{print $NF}' | tr -d '\n' > $(results.blog-version.path)
 ---
 apiVersion: tekton.dev/v1beta1
 kind: ClusterTask
 metadata:
   name: create-and-push-blog-image
+  namespace: default
 spec:
   description: Create and Push Blog Image
   workspaces:
-    - name: blog-storage
+    - name: scratch-space
     - name: blog-registry-secret
       description: |
         The Kubernetes secret containing credentials to the image registry
@@ -186,6 +229,8 @@ spec:
       workspaces:
         - name: scratch-space
     - name: decrypt-blog-env
+      runAfter:
+        - fetch-blog-gen
       taskRef:
         kind: ClusterTask
         name: decrypt-blog-env
@@ -193,15 +238,26 @@ spec:
         - name: scratch-space
         - name: blog-env-secret
     - name: render-blog
+      runAfter:
+        - decrypt-blog-env
       taskRef:
         kind: ClusterTask
         name: render-blog
       workspaces:
         - name: scratch-space
-        - name: blog-storage
     - name: create-and-push-blog-image
+      runAfter:
+        - render-blog
       taskRef:
         kind: ClusterTask
         name: create-and-push-blog-image
+      params:
+        - name: registry_name
+          value: "$(params.registry_name)"
+        - name: blog_server_name
+          value: "$(tasks.render-blog.results.blog-server-name)"
+        - name: blog_version
+          value: "$(tasks.render-blog.results.blog-version)"
       workspaces:
-        - name: blog-storage
+        - name: scratch-space
+        - name: blog-registry-secret
